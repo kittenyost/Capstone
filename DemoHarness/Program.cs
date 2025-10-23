@@ -3,46 +3,86 @@
 class Program
 {
     /*
-     * BUGS FOUND & FIXED
-     * 1) Base case returned null for empty strings:
-     *      Original: if (s.Length == 0) return null;
-     *    Why wrong: Returning null for "" causes surprising behavior and potential errors when concatenating.
-     *               The correct reverse of "" is "" (empty string), not null.
-     *    Fix: Return s (which is ""), or explicitly return string.Empty.
+     * Reverse(string s) – strict, iterative, allocation-minimal.
      *
-     * 2) Null input not handled:
-     *    Why wrong: Calling Reverse(null) would throw a NullReferenceException at s.Length.
-     *    Fix: Add a guard at the top. For grading clarity, we throw ArgumentNullException.
-     *         (If preferred, you could treat null as "" by returning string.Empty instead.)
-     *
-     * 3) Safety/clarity:
-     *    The recursive step is fine (Reverse(rest) + first), but it relied on the incorrect null base-case.
-     *    With the corrected base-case and null guard, the recursion is safe and accurate.
+     * Improvements vs. recursive version:
+     * 1) Iterative two-pointer swap avoids recursion depth/overhead.
+     * 2) No Substring allocations; just one char[] buffer.
+     * 3) Same strict behavior on null (throws ArgumentNullException).
+     * 4) O(n) time, O(n) space (due to output buffer).
      */
 
+    /// <summary>
+    /// Reverses a string. Throws ArgumentNullException if s is null.
+    /// </summary>
     public static string Reverse(string s)
     {
         if (s is null)
             throw new ArgumentNullException(nameof(s));
 
-        // Base case: empty or single-character strings are already reversed
-        if (s.Length <= 1)
+        int n = s.Length;
+        if (n <= 1)
             return s;
 
-        char first = s[0];
-        string rest = s.Substring(1);
-        // Recursive case: reverse the rest, then append the first char
-        return Reverse(rest) + first;
+        // Copy to buffer and do in-place two-pointer swap.
+        char[] buffer = s.ToCharArray();
+        int i = 0, j = n - 1;
+        while (i < j)
+        {
+            (buffer[i], buffer[j]) = (buffer[j], buffer[i]);
+            i++; j--;
+        }
+        return new string(buffer);
+    }
+
+    /// <summary>
+    /// Tolerant variant: treats null as "" instead of throwing.
+    /// </summary>
+    public static string ReverseOrEmpty(string s)
+    {
+        if (s is null) return string.Empty;
+        return Reverse(s);
     }
 
     static void Main()
     {
-        // Required tests
-        Console.WriteLine(Reverse("hello"));    // Expected: "olleh"
-        Console.WriteLine(Reverse("racecar"));  // Expected: "racecar"
-        Console.WriteLine($"'{Reverse("")}'");  // Expected: '' (empty string)
+        // “Right” inputs: normal words, palindromes, empty, single char,
+        // spaces, punctuation, Unicode (emoji), mixed case, whitespace-only.
+        var tests = new (string Label, string Input, string Expected)[]
+        {
+            ("simple",            "hello",       "olleh"),
+            ("palindrome",        "racecar",     "racecar"),
+            ("empty",             "",            ""),
+            ("single-char",       "A",           "A"),
+            ("with-spaces",       "ab cd",       "dc ba"),
+            ("punctuation",       "a,b.c!",      "!c.b,a"),
+            ("unicode-emoji",     "🙂👍",          "👍🙂"),
+            ("mixed-case",        "AbCdE",       "EdCbA"),
+            ("whitespace-only",   "   ",         "   "),
+        };
 
-        // Optional: uncomment to see null handling behavior (will throw ArgumentNullException)
-        // Console.WriteLine(Reverse(null));
+        Console.WriteLine("== Reverse() test results (strict) ==");
+        foreach (var (label, input, expected) in tests)
+        {
+            string actual = Reverse(input);
+            bool pass = actual == expected;
+            Console.WriteLine(
+                $"{label,-15} | input: '{input}' -> got: '{actual}' | expected: '{expected}' | {(pass ? "PASS" : "FAIL")}"
+            );
+        }
+
+        // Optional: demonstrate strict null handling (throws), then tolerant variant.
+        // Uncomment to see behavior.
+        // try
+        // {
+        //     Reverse(null);
+        //     Console.WriteLine("null-input (strict): FAIL (should have thrown)");
+        // }
+        // catch (ArgumentNullException)
+        // {
+        //     Console.WriteLine("null-input (strict): PASS (threw ArgumentNullException)");
+        // }
+
+        // Console.WriteLine($"null-input (tolerant): '{ReverseOrEmpty(null)}'  // expected: ''");
     }
 }
